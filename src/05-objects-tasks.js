@@ -20,8 +20,10 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(width, height) {
+  this.width = width;
+  this.height = height;
+  this.getArea = () => this.width * this.height;
 }
 
 
@@ -35,8 +37,8 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
 
 
@@ -51,8 +53,10 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  const result = Object.create(proto);
+  Object.assign(result, JSON.parse(json));
+  return result;
 }
 
 
@@ -111,33 +115,109 @@ function fromJSON(/* proto, json */) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  classVal: [],
+  attrVal: [],
+  pClassVal: [],
+
+  element(value) {
+    const result = Object.create(cssSelectorBuilder);
+    Object.assign(result, this);
+    if (result.elemVal) {
+      throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    }
+    if (result.idVal || result.classVal.length > 0 || result.attrVal.length > 0
+      || result.pClassVal.length > 0 || result.pElemVal) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    result.elemVal = value;
+    return result;
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    const result = Object.create(cssSelectorBuilder);
+    Object.assign(result, this);
+    if (result.idVal) {
+      throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    }
+    if (result.classVal.length > 0 || result.attrVal.length > 0
+      || result.pClassVal.length > 0 || result.pElemVal) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    result.idVal = value;
+    return result;
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    const result = Object.create(cssSelectorBuilder);
+    Object.assign(result, this);
+    result.classVal = [...this.classVal, value];
+    if (result.attrVal.length > 0 || result.pClassVal.length > 0 || result.pElemVal) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    return result;
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    const result = Object.create(cssSelectorBuilder);
+    Object.assign(result, this);
+    result.attrVal = [...this.attrVal, value];
+    if (result.pClassVal.length > 0 || result.pElemVal) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    return result;
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    const result = Object.create(cssSelectorBuilder);
+    Object.assign(result, this);
+    result.pClassVal = [...this.pClassVal, value];
+    if (result.pElemVal) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    return result;
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    const result = Object.create(cssSelectorBuilder);
+    Object.assign(result, this);
+    if (result.pElemVal) {
+      throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    }
+    result.pElemVal = value;
+    return result;
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  stringify() {
+    let result = '';
+
+    if (this.elemVal) {
+      result += this.elemVal;
+    }
+    if (this.idVal) {
+      result += `#${this.idVal}`;
+    }
+    if (this.classVal.length > 0) {
+      result += `.${this.classVal.join('.')}`;
+    }
+    if (this.attrVal.length > 0) {
+      result += `[${this.attrVal.join(' ')}]`;
+    }
+    if (this.pClassVal.length > 0) {
+      result += `:${this.pClassVal.join(':')}`;
+    }
+    if (this.pElemVal) {
+      result += `::${this.pElemVal}`;
+    }
+
+    return result;
   },
+
+  combine(selector1, combinator, selector2) {
+    return {
+      stringify: () => `${selector1.stringify()} ${combinator} ${selector2.stringify()}`,
+    };
+  },
+
 };
 
 
